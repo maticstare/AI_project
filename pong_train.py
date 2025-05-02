@@ -15,7 +15,7 @@ import signal
 import sys
 
 SAVE_DIR = "data/"
-LOG_DIR = "logs/"
+LOG_DIR = "data/"
 MODEL_PATH = os.path.join(SAVE_DIR, "dqn_model.pth")
 METRICS_FILE = os.path.join(LOG_DIR, "training_metrics.npz")
 PLOT_FILE = os.path.join(LOG_DIR, "training_metrics_plot.png")
@@ -53,7 +53,7 @@ class PongEnv:
         self.env.close()
 
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dims=[128, 64]):
+    def __init__(self, input_dim, output_dim, hidden_dims=[128, 64]): #[64, 32]
         super(DQN, self).__init__()
         layers = []
         prev_dim = input_dim
@@ -71,7 +71,7 @@ class DQN(nn.Module):
 
 class RLAgent:
     def __init__(self, state_dim, action_dim, lr=0.001, gamma=0.99, epsilon=1.0, 
-                 epsilon_decay=0.995, min_epsilon=0.01, memory_size=100000, batch_size=32,
+                 epsilon_decay=0.9975, min_epsilon=0.01, memory_size=100000, batch_size=32,
                  target_update_freq=1000):
         self.gamma = gamma
         self.epsilon = epsilon
@@ -312,7 +312,7 @@ class MetricsLogger:
 def clip_reward(reward, clip_value=1.0):
     return max(min(reward, clip_value), -clip_value)
 
-def train(num_episodes=10000, render_mode="rgb_array", clip_rewards=True):
+def train(num_episodes=10000, render_mode="rgb_array"):
     def signal_handler(sig, frame):
         print("\nTraining interrupted. Saving progress...")
         agent.save_model()
@@ -365,10 +365,7 @@ def train(num_episodes=10000, render_mode="rgb_array", clip_rewards=True):
             
             episode_reward += reward
             
-            if clip_rewards:
-                clipped_reward = clip_reward(reward)
-            else:
-                clipped_reward = reward
+            clipped_reward = clip_reward(reward)
                 
             agent.store_experience(state, action, clipped_reward, next_state, terminated)
             state = next_state

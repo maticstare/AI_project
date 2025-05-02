@@ -8,42 +8,30 @@ import random
 
 SAVE_DIR = "data/"
 MODEL_PATH = os.path.join(SAVE_DIR, "dqn_model.pth")
-WINDOW_SIZE = 4  # Number of consecutive frames to stack
+WINDOW_SIZE = 4
 
 class TestAgent:
     def __init__(self):
-        """Initialize the environment and load the trained model."""
         self.env = PongEnv(render_mode="human")
-        self.state_dim = 4 * WINDOW_SIZE  # 4 features × 4 frames = 16 dimensions
+        self.state_dim = 4 * WINDOW_SIZE
         self.action_dim = self.env.env.action_space.n
-        self.epsilon = 0.05  # Small epsilon for some exploration during testing
+        self.epsilon = 0.05
 
-        # Load trained model
         self.model = DQN(self.state_dim, self.action_dim)
         self.load_model()
 
     def load_model(self):
-        """Load the trained model from file."""
         if os.path.exists(MODEL_PATH):
             checkpoint = torch.load(MODEL_PATH, map_location=torch.device("cpu"))
             
-            # Try different potential key names in saved model
-            if "policy_model_state_dict" in checkpoint:
-                self.model.load_state_dict(checkpoint["policy_model_state_dict"])
-                print("Loaded policy model weights")
-            elif "model_state_dict" in checkpoint:
-                self.model.load_state_dict(checkpoint["model_state_dict"])
-                print("Loaded model weights using legacy key")
-            else:
-                print("Warning: No recognized model weights found. Keys:", list(checkpoint.keys()))
-                
-            self.model.eval()  # Set model to evaluation mode
+            self.model.load_state_dict(checkpoint["policy_model_state_dict"])
+            print("Loaded policy model weights")                
+            self.model.eval()
             print(f"Loaded trained model from {MODEL_PATH}")
         else:
             raise FileNotFoundError("No trained model found! Train and save a model first.")
 
     def play(self, num_games=1):
-        """Play a test game using the trained model."""
         total_scores = []
         
         for game in range(num_games):
@@ -57,7 +45,7 @@ class TestAgent:
                 next_state, reward, terminated, truncated = self.env.step(action)
                 total_reward += reward
                 state = next_state
-                done = terminated or truncated  # End of episode
+                done = terminated or truncated
                 steps += 1
             
             total_scores.append(total_reward)
@@ -67,7 +55,6 @@ class TestAgent:
         self.env.close()
     
     def select_action(self, state):
-        """Epsilon-greedy policy for action selection."""
         if random.random() < self.epsilon:
             return random.randint(0, self.model.network[-1].out_features - 1)
         else:
@@ -77,12 +64,7 @@ class TestAgent:
 
 
 if __name__ == "__main__":
-    try:
-        tester = TestAgent()
-        num_games = 5
-        print(f"Playing {num_games} test games with the trained agent...")
-        tester.play(num_games)
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        import traceback
-        traceback.print_exc()
+    tester = TestAgent()
+    num_games = 5
+    print(f"Playing {num_games} test games with the trained agent...")
+    tester.play(num_games)

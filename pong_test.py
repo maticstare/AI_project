@@ -8,14 +8,15 @@ import random
 
 SAVE_DIR = "data/"
 MODEL_PATH = os.path.join(SAVE_DIR, "dqn_model.pth")
+WINDOW_SIZE = 4  # Number of consecutive frames to stack
 
 class TestAgent:
     def __init__(self):
         """Initialize the environment and load the trained model."""
         self.env = PongEnv(render_mode="human")
-        self.state_dim = 4  # Right paddle, left paddle, ball X, ball Y
+        self.state_dim = 4 * WINDOW_SIZE  # 4 features × 4 frames = 16 dimensions
         self.action_dim = self.env.env.action_space.n
-        self.epsilon = 0.1
+        self.epsilon = 0.05  # Small epsilon for some exploration during testing
 
         # Load trained model
         self.model = DQN(self.state_dim, self.action_dim)
@@ -24,8 +25,18 @@ class TestAgent:
     def load_model(self):
         """Load the trained model from file."""
         if os.path.exists(MODEL_PATH):
-            checkpoint = torch.load(MODEL_PATH, map_location=torch.device("cpu"), weights_only=False)
-            self.model.load_state_dict(checkpoint["model_state_dict"], strict=True)
+            checkpoint = torch.load(MODEL_PATH, map_location=torch.device("cpu"))
+            
+            # Try different potential key names in saved model
+            if "policy_model_state_dict" in checkpoint:
+                self.model.load_state_dict(checkpoint["policy_model_state_dict"])
+                print("Loaded policy model weights")
+            elif "model_state_dict" in checkpoint:
+                self.model.load_state_dict(checkpoint["model_state_dict"])
+                print("Loaded model weights using legacy key")
+            else:
+                print("Warning: No recognized model weights found. Keys:", list(checkpoint.keys()))
+                
             self.model.eval()  # Set model to evaluation mode
             print(f"Loaded trained model from {MODEL_PATH}")
         else:
@@ -33,10 +44,13 @@ class TestAgent:
 
     def play(self, num_games=1):
         """Play a test game using the trained model."""
+        total_scores = []
+        
         for game in range(num_games):
             state = self.env.reset()
             total_reward = 0
             done = False
+            steps = 0
 
             while not done:
                 action = self.select_action(state)
@@ -44,9 +58,12 @@ class TestAgent:
                 total_reward += reward
                 state = next_state
                 done = terminated or truncated  # End of episode
+                steps += 1
             
-            print(f"Game {game + 1}: Total Reward = {total_reward:.2f}")
+            total_scores.append(total_reward)
+            print(f"Game {game + 1}: Total Reward = {total_reward:.2f}, Steps = {steps}")
 
+        print(f"\nAverage score over {num_games} games: {sum(total_scores)/len(total_scores):.2f}")
         self.env.close()
     
     def select_action(self, state):
@@ -60,6 +77,12 @@ class TestAgent:
 
 
 if __name__ == "__main__":
-    tester = TestAgent()
-    num_games = 5
-    tester.play(num_games)
+    try:
+        tester = TestAgent()
+        num_games = 5
+        print(f"Playing {num_games} test games with the trained agent...")
+        tester.play(num_games)
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        import traceback
+        traceback.print_exc()

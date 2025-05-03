@@ -4,7 +4,7 @@ This repository contains an implementation of a Deep Q-Network (DQN) agent that 
 
 ## Demo Video
 
-![Pong Agent Demo](data/pong.mp4)
+[Pong Agent Demo](https://github.com/user-attachments/assets/497d05bd-7eed-4427-917e-130ce7081fce)
 
 ## Project Overview
 
